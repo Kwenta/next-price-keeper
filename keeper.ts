@@ -53,6 +53,14 @@ async function getExchangeRatesContract() {
 // Queue of address w/ active orders
 let orders: Order[] = [];
 
+// Remove order from orders in place
+function deleteOrder(account: string) {
+    const index = orders.findIndex((order) => order.account === account);
+    if (index >= 0) {
+        orders.splice(index, 1);
+    }
+}
+
 async function main() {
     const FuturesMarkets: Contract[] = await getFuturesMarketContracts();
     const ExchangeRates: Contract = await getExchangeRatesContract();
@@ -87,25 +95,24 @@ async function main() {
     });
 
     // @TODO: Switch to CL aggregator events for less RPC calls
-    provider.on('block', (block) => {
-        orders.forEach(async (order) => {
+    provider.on('block', async (block) => {
+        // Run sequentially for now
+        for (const order of orders) {
             const baseAsset = await order.market.baseAsset();
             const latestRound = (await ExchangeRates.getCurrentRoundId(baseAsset)).toString();
-            console.log('Current round:', latestRound, 'Order round:', order.targetRoundId);
+            //console.log('Current round:', latestRound, 'Order round:', order.targetRoundId);
             if (latestRound >= order.targetRoundId) {
                 try {
-                    await order.market.callStatic.executeNextPriceOrder(order.account);
-                    console.log('attempt');
-                    await order.market.executeNextPriceOrder(order.account);
+                    const tx = await order.market.executeNextPriceOrder(order.account);
+                    await tx.wait();
+                    deleteOrder(order.account);
+                    console.log('Success!', order.account);
                 } catch (e: any) {
-                    console.log(
-                        'ERROR:',
-                        order.account,
-                        e /*JSON.parse(e.error.body).error.message*/
-                    );
+                    deleteOrder(order.account);
+                    console.log('ERROR:', order.account, e);
                 }
             }
-        });
+        }
     });
 }
 
