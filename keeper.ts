@@ -67,6 +67,7 @@ async function main() {
 
     // Set up next price listeners
     FuturesMarkets.forEach((FuturesMarket) => {
+        // Enqueue placed orders
         FuturesMarket.on(
             'NextPriceOrderSubmitted',
             (
@@ -91,22 +92,44 @@ async function main() {
                 orders.push(order);
             }
         );
-        console.log(`${FuturesMarket.address} next price event listener set up.`);
+
+        // Delete removed orders
+        FuturesMarket.on('NextPriceOrderRemoved', (account) => {
+            console.log('Order removed for:', account);
+            deleteOrder(account);
+        });
+
+        console.log(`${FuturesMarket.address} next price event listeners set up.`);
     });
 
     // @TODO: Switch to CL aggregator events for less RPC calls
     provider.on('block', async (block) => {
+        if (orders.length == 0) console.log(block, 'no pending orders...');
         // Run sequentially for now
         for (const order of orders) {
             const baseAsset = await order.market.baseAsset();
-            const latestRound = (await ExchangeRates.getCurrentRoundId(baseAsset)).toString();
-            //console.log('Current round:', latestRound, 'Order round:', order.targetRoundId);
-            if (latestRound >= order.targetRoundId) {
+            const latestRoundBN = await ExchangeRates.getCurrentRoundId(baseAsset);
+            const latestRound = latestRoundBN.toString();
+            console.log(
+                block,
+                'Checking order for:',
+                order.account,
+                'Rounds until target round:',
+                ethers.BigNumber.from(order.targetRoundId).sub(latestRound).toString()
+            );
+
+            // Order is stale
+            if (latestRound >= order.targetRoundId + 2) {
+                console.log('Order stale:', order.account);
+                deleteOrder(order.account);
+            }
+            // Order is active
+            else if (latestRound >= order.targetRoundId) {
                 try {
                     const tx = await order.market.executeNextPriceOrder(order.account);
                     await tx.wait();
                     deleteOrder(order.account);
-                    console.log('Success!', order.account);
+                    console.log('SUCCESS! Order executed for:', order.account);
                 } catch (e: any) {
                     deleteOrder(order.account);
                     console.log('ERROR:', order.account, e);
