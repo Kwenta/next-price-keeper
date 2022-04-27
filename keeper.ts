@@ -104,7 +104,6 @@ async function main() {
 
     // @TODO: Switch to CL aggregator events for less RPC calls
     provider.on('block', async (block) => {
-        if (orders.length == 0) console.log(block, 'no pending orders...');
         // Run sequentially for now
         for (const order of orders) {
             const baseAsset = await order.market.baseAsset();
@@ -131,7 +130,6 @@ async function main() {
                     deleteOrder(order.account);
                     console.log('SUCCESS! Order executed for:', order.account);
                 } catch (e: any) {
-                    deleteOrder(order.account);
                     console.log('ERROR:', order.account, e);
                 }
             }
