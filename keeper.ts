@@ -14,6 +14,7 @@ type Order = {
     commitDeposit: string;
     keeperDeposit: string;
     trackingCode: string;
+    failures: number;
 };
 
 const provider = new ethers.providers.JsonRpcProvider(
@@ -88,6 +89,7 @@ async function main() {
                     commitDeposit: commitDeposit.toString(),
                     keeperDeposit: keeperDeposit.toString(),
                     trackingCode: ethers.utils.parseBytes32String(trackingCode),
+                    failures: 0,
                 };
                 console.log('Order received for:', order.account, 'from', order.trackingCode);
                 orders.push(order);
@@ -143,6 +145,11 @@ async function main() {
                             console.log('SUCCESS! Order executed for:', order.account);
                         }
                     } catch (e: any) {
+                        order.failures++;
+                        if (order.failures >= 3) {
+                            console.log('REMOVING order. Max failed attempts.', order.account);
+                            deleteOrder(order.account);
+                        }
                         txQueue.delete(order.account);
                         console.log('ERROR:', order.account, e);
                     }
