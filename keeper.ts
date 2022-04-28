@@ -52,6 +52,7 @@ async function getExchangeRatesContract() {
 
 // Queue of address w/ active orders
 let orders: Order[] = [];
+let txQueue = new Set();
 
 // Remove order from orders in place
 function deleteOrder(account: string) {
@@ -102,38 +103,52 @@ async function main() {
         console.log(`${FuturesMarket.address} next price event listeners set up.`);
     });
 
+    let blockQueue = Promise.resolve();
     // @TODO: Switch to CL aggregator events for less RPC calls
-    provider.on('block', async (block) => {
-        // Run sequentially for now
-        for (const order of orders) {
-            const baseAsset = await order.market.baseAsset();
-            const latestRoundBN = await ExchangeRates.getCurrentRoundId(baseAsset);
-            const latestRound = latestRoundBN.toString();
-            console.log(
-                block,
-                'Checking order for:',
-                order.account,
-                'Rounds until target round:',
-                ethers.BigNumber.from(order.targetRoundId).sub(latestRound).toString()
-            );
+    provider.on('block', (block) => {
+        // Create promise chain for block events for sequential processing
+        blockQueue = blockQueue.then(async () => {
+            for (const order of orders) {
+                const baseAsset = await order.market.baseAsset();
+                const latestRoundBN: ethers.BigNumber = await ExchangeRates.getCurrentRoundId(
+                    baseAsset
+                );
+                const latestRound = latestRoundBN.toString();
+                console.log(
+                    block,
+                    'Checking order for:',
+                    order.account,
+                    'Rounds until target round:',
+                    ethers.BigNumber.from(order.targetRoundId).sub(latestRound).toString()
+                );
 
-            // Order is stale
-            if (latestRound >= order.targetRoundId + 2) {
-                console.log('Order stale:', order.account);
-                deleteOrder(order.account);
-            }
-            // Order is active
-            else if (latestRound >= order.targetRoundId) {
-                try {
-                    const tx = await order.market.executeNextPriceOrder(order.account);
-                    await tx.wait();
+                // Order is stale
+                if (latestRoundBN.gte(ethers.BigNumber.from(order.targetRoundId).add(2))) {
+                    console.log('Order stale:', order.account);
                     deleteOrder(order.account);
-                    console.log('SUCCESS! Order executed for:', order.account);
-                } catch (e: any) {
-                    console.log('ERROR:', order.account, e);
+                    if (!txQueue.has(order.account)) {
+                        txQueue.delete(order.account);
+                    }
+                }
+                // Order is active
+                else if (latestRoundBN.gte(ethers.BigNumber.from(order.targetRoundId))) {
+                    try {
+                        if (!txQueue.has(order.account)) {
+                            console.log('ATTEMPTING order for:', order.account);
+                            txQueue.add(order.account);
+                            const tx = await order.market.executeNextPriceOrder(order.account);
+                            await tx.wait();
+                            deleteOrder(order.account);
+                            txQueue.delete(order.account);
+                            console.log('SUCCESS! Order executed for:', order.account);
+                        }
+                    } catch (e: any) {
+                        txQueue.delete(order.account);
+                        console.log('ERROR:', order.account, e);
+                    }
                 }
             }
-        }
+        });
     });
 }
 

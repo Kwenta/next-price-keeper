@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "start": "pm2 start ts-node --watch -- keeper.ts",
+    "start": "pm2 start ts-node --watch -- keeper.ts --time",
     "dev": "pm2 start ts-node --no-daemon --no-autorestart --watch -- keeper.ts"
   },
   "dependencies": {
