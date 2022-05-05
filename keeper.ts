@@ -18,7 +18,7 @@ type Order = {
 };
 
 const provider = new ethers.providers.JsonRpcProvider(
-    `https://${process.env.NETWORK}.infura.io/v3/ec6264d9beef4c33963ab0f1c2d2ee70`
+    `https://${process.env.NETWORK}.infura.io/v3/${process.env.API_KEY}`
 );
 const signer = new ethers.Wallet(process.env.PRIVATE_KEY ?? '', provider);
 
