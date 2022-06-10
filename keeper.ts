@@ -146,7 +146,7 @@ async function main() {
                         }
                     } catch (e: any) {
                         order.failures++;
-                        if (order.failures >= 100) {
+                        if (order.failures >= 10) {
                             console.log('REMOVING order. Max failed attempts.', order.account);
                             deleteOrder(order.account);
                         }
