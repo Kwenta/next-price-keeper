@@ -146,12 +146,12 @@ async function main() {
                         }
                     } catch (e: any) {
                         order.failures++;
-                        if (order.failures >= 10) {
+                        if (order.failures >= 100) {
                             console.log('REMOVING order. Max failed attempts.', order.account);
                             deleteOrder(order.account);
                         }
                         txQueue.delete(order.account);
-                        console.log('ERROR:', order.account, e);
+                        console.log('FAILED attempts:', order.failures, 'Account:', order.account);
                     }
                 }
             }
