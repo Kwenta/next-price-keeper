@@ -151,7 +151,7 @@ async function main() {
                             deleteOrder(order.account);
                         }
                         txQueue.delete(order.account);
-                        console.log('ERROR:', order.account, e);
+                        console.log('FAILED attempts:', order.failures, 'Account:', order.account);
                     }
                 }
             }
