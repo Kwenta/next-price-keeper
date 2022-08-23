@@ -1,7 +1,7 @@
 // MVP of next-price-order keeper
 import { ethers, Contract } from 'ethers';
 import optimismMainnetDeployments from './node_modules/synthetix/publish/deployed/mainnet-ovm/deployment.json';
-import optimismKovanDeployments from './node_modules/synthetix/publish/deployed/kovan-ovm/deployment.json';
+import optimismGoerliDeployments from './node_modules/synthetix/publish/deployed/goerli-ovm/deployment.json';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -24,8 +24,8 @@ const signer = new ethers.Wallet(process.env.PRIVATE_KEY ?? '', provider);
 
 async function getFuturesMarketContracts() {
     const deploymentsArtifact =
-        process.env.NETWORK == 'optimism-kovan'
-            ? optimismKovanDeployments
+        process.env.NETWORK == 'optimism-goerli'
+            ? optimismGoerliDeployments
             : optimismMainnetDeployments;
     const futuresMarketABI = deploymentsArtifact.sources.FuturesMarket.abi;
     const futuresMarketManagerAddress = deploymentsArtifact.targets.FuturesMarketManager.address;
@@ -43,8 +43,8 @@ async function getFuturesMarketContracts() {
 
 async function getExchangeRatesContract() {
     const deploymentsArtifact =
-        process.env.NETWORK == 'optimism-kovan'
-            ? optimismKovanDeployments
+        process.env.NETWORK == 'optimism-goerli'
+            ? optimismGoerliDeployments
             : optimismMainnetDeployments;
     const exchangeRatesABI = deploymentsArtifact.sources.ExchangeRates.abi;
     const exchangeRatesAddress = deploymentsArtifact.targets.ExchangeRates.address;
