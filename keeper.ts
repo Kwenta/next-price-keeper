@@ -24,7 +24,7 @@ const signer = new ethers.Wallet(process.env.PRIVATE_KEY ?? '', provider);
 
 async function getFuturesMarketContracts() {
     const deploymentsArtifact =
-        process.env.NETWORK == 'optimism-kovan'
+        process.env.NETWORK == 'optimism-goerli'
             ? optimismGoerliDeployments
             : optimismMainnetDeployments;
     const futuresMarketABI = deploymentsArtifact.sources.FuturesMarket.abi;
